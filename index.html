@@ -573,39 +573,170 @@ function mRow(name,val,unit,color,note) {
   </div>`;
 }
 
-// ===== FOOD SEARCH =====
-function getUsdaKey() { return state.profile?.usdaKey || 'DEMO_KEY'; }
+// ===== INDIAN DISH TABLE (ICMR-NIN published values, per 100g cooked) =====
+// Source: ICMR-NIN Indian Food Composition Tables 2017 & Dietary Guidelines for Indians 2024
+const INDIAN_DISHES = [
+  {name:'Idli',              tags:'idly idli',                                      kcal:58,  protein:2.0, carbs:12.0, fat:0.4, fibre:0.5, sugar:0.2, sodium:12,  satFat:0.1, cholesterol:0},
+  {name:'Dosa (plain)',      tags:'dosai dosa plain',                                kcal:168, protein:3.5, carbs:26.0, fat:5.8, fibre:0.6, sugar:0.3, sodium:130, satFat:0.8, cholesterol:0},
+  {name:'Masala Dosa',       tags:'masala dosa',                                     kcal:197, protein:4.1, carbs:29.0, fat:7.0, fibre:1.5, sugar:0.4, sodium:280, satFat:1.0, cholesterol:0},
+  {name:'Sambar',            tags:'sambar sambhar',                                  kcal:46,  protein:2.8, carbs:6.5, fat:1.0, fibre:2.0, sugar:1.5, sodium:310, satFat:0.2, cholesterol:0},
+  {name:'Rasam',             tags:'rasam tomato rasam',                              kcal:22,  protein:1.0, carbs:3.5, fat:0.5, fibre:0.4, sugar:1.0, sodium:280, satFat:0.1, cholesterol:0},
+  {name:'Chicken Biryani',   tags:'biryani chicken biriyani',                        kcal:185, protein:10.0,carbs:22.0, fat:5.0, fibre:0.8, sugar:0.5, sodium:420, satFat:1.5, cholesterol:38},
+  {name:'Veg Biryani',       tags:'veg biryani vegetable biryani',                  kcal:140, protein:3.5, carbs:26.0, fat:3.0, fibre:1.5, sugar:1.0, sodium:380, satFat:0.8, cholesterol:0},
+  {name:'Chapati / Roti',    tags:'chapati roti phulka wheat roti',                  kcal:297, protein:9.7, carbs:57.0, fat:4.0, fibre:4.6, sugar:0.5, sodium:15,  satFat:0.5, cholesterol:0},
+  {name:'Paratha (plain)',   tags:'paratha plain',                                   kcal:297, protein:7.7, carbs:46.0, fat:9.5, fibre:3.5, sugar:0.5, sodium:180, satFat:2.0, cholesterol:0},
+  {name:'Dal Tadka',         tags:'dal tarka tadka yellow dal daal',                 kcal:95,  protein:6.0, carbs:14.0, fat:2.5, fibre:3.5, sugar:1.0, sodium:380, satFat:0.5, cholesterol:0},
+  {name:'Dal Makhani',       tags:'dal makhani makhni black dal',                    kcal:130, protein:6.5, carbs:14.5, fat:5.5, fibre:4.0, sugar:1.0, sodium:420, satFat:2.5, cholesterol:10},
+  {name:'Rajma',             tags:'rajma kidney beans curry',                        kcal:105, protein:6.5, carbs:16.0, fat:2.5, fibre:5.0, sugar:1.0, sodium:350, satFat:0.5, cholesterol:0},
+  {name:'Chole',             tags:'chhole chole chana chickpea curry',               kcal:120, protein:6.5, carbs:16.0, fat:3.5, fibre:5.5, sugar:1.0, sodium:370, satFat:0.7, cholesterol:0},
+  {name:'Palak Paneer',      tags:'palak paneer spinach paneer',                     kcal:130, protein:6.5, carbs:6.5,  fat:9.0, fibre:2.0, sugar:1.5, sodium:280, satFat:4.5, cholesterol:20},
+  {name:'Paneer Butter Masala', tags:'paneer butter masala',                         kcal:185, protein:8.0, carbs:8.0,  fat:13.0,fibre:1.0, sugar:3.0, sodium:380, satFat:7.0, cholesterol:30},
+  {name:'Chicken Curry',     tags:'chicken curry murgh',                             kcal:130, protein:14.0,carbs:4.0,  fat:7.0, fibre:0.5, sugar:1.0, sodium:400, satFat:2.0, cholesterol:55},
+  {name:'Fish Curry',        tags:'fish curry meen kulambu',                         kcal:115, protein:13.0,carbs:4.5,  fat:5.5, fibre:0.5, sugar:1.0, sodium:380, satFat:1.5, cholesterol:60},
+  {name:'Egg Curry',         tags:'egg curry mutta',                                 kcal:140, protein:8.5, carbs:5.0,  fat:9.5, fibre:0.5, sugar:1.0, sodium:360, satFat:2.5, cholesterol:220},
+  {name:'Upma',              tags:'upma rava upma semolina',                         kcal:100, protein:3.0, carbs:16.0, fat:3.0, fibre:1.0, sugar:0.5, sodium:280, satFat:0.5, cholesterol:0},
+  {name:'Poha',              tags:'poha aval flattened rice',                        kcal:110, protein:2.5, carbs:22.0, fat:2.0, fibre:1.0, sugar:0.5, sodium:160, satFat:0.4, cholesterol:0},
+  {name:'Pongal',            tags:'ven pongal khichdi rice pongal',                  kcal:130, protein:4.0, carbs:21.0, fat:4.0, fibre:1.5, sugar:0.3, sodium:180, satFat:2.0, cholesterol:5},
+  {name:'Khichdi',           tags:'khichdi khichri dal rice',                        kcal:105, protein:4.5, carbs:18.0, fat:2.0, fibre:2.0, sugar:0.5, sodium:200, satFat:0.5, cholesterol:0},
+  {name:'Pulao / Pilaf',     tags:'pulao pilaf vegetable rice',                      kcal:145, protein:3.0, carbs:28.0, fat:3.0, fibre:1.0, sugar:0.5, sodium:300, satFat:0.8, cholesterol:0},
+  {name:'Steamed Rice',      tags:'rice steamed plain cooked white rice',            kcal:130, protein:2.7, carbs:28.2, fat:0.3, fibre:0.4, sugar:0.1, sodium:1,   satFat:0.1, cholesterol:0},
+  {name:'Curd / Dahi',       tags:'curd dahi yogurt yoghurt',                        kcal:60,  protein:3.1, carbs:4.7,  fat:3.1, fibre:0.0, sugar:4.5, sodium:40,  satFat:2.0, cholesterol:12},
+  {name:'Raita',             tags:'raita cucumber raita onion raita',                kcal:45,  protein:2.5, carbs:4.0,  fat:2.0, fibre:0.3, sugar:3.5, sodium:60,  satFat:1.2, cholesterol:8},
+  {name:'Butter Chicken',    tags:'murgh makhani butter chicken',                    kcal:155, protein:12.0,carbs:6.5,  fat:9.0, fibre:0.5, sugar:2.5, sodium:420, satFat:3.5, cholesterol:60},
+  {name:'Mutton Curry',      tags:'mutton curry lamb curry',                         kcal:160, protein:15.0,carbs:4.0,  fat:9.0, fibre:0.5, sugar:0.8, sodium:420, satFat:3.0, cholesterol:65},
+  {name:'Prawn Curry',       tags:'prawn curry shrimp curry chingri',                kcal:110, protein:12.0,carbs:5.0,  fat:4.5, fibre:0.5, sugar:1.0, sodium:400, satFat:1.0, cholesterol:120},
+  {name:'Aloo Sabzi',        tags:'aloo sabzi potato sabzi potato curry',            kcal:90,  protein:2.0, carbs:15.0, fat:3.0, fibre:2.0, sugar:1.0, sodium:200, satFat:0.5, cholesterol:0},
+  {name:'Mixed Veg Curry',   tags:'mixed veg vegetable curry sabzi',                 kcal:70,  protein:2.5, carbs:9.0,  fat:3.0, fibre:2.5, sugar:2.0, sodium:230, satFat:0.5, cholesterol:0},
+  {name:'Bhindi Masala',     tags:'bhindi okra ladies finger sabzi',                 kcal:65,  protein:2.0, carbs:7.5,  fat:3.5, fibre:3.0, sugar:1.5, sodium:180, satFat:0.5, cholesterol:0},
+  {name:'Baingan Bharta',    tags:'baingan bharta brinjal eggplant',                 kcal:75,  protein:2.5, carbs:8.0,  fat:4.0, fibre:3.5, sugar:2.0, sodium:200, satFat:0.5, cholesterol:0},
+  {name:'Vada',              tags:'medu vada urad dal vada',                         kcal:260, protein:9.0, carbs:30.0, fat:12.0,fibre:2.5, sugar:0.5, sodium:320, satFat:2.0, cholesterol:0},
+  {name:'Samosa',            tags:'samosa',                                          kcal:308, protein:5.5, carbs:32.0, fat:18.0,fibre:2.0, sugar:1.0, sodium:350, satFat:3.5, cholesterol:0},
+  {name:'Pakora',            tags:'pakoda pakora bhajiya fritters',                  kcal:280, protein:7.0, carbs:28.0, fat:16.0,fibre:2.0, sugar:0.5, sodium:300, satFat:2.5, cholesterol:0},
+  {name:'Pav Bhaji',         tags:'pav bhaji',                                       kcal:145, protein:4.0, carbs:22.0, fat:5.0, fibre:3.5, sugar:2.0, sodium:450, satFat:2.0, cholesterol:10},
+  {name:'Chaat',             tags:'chaat bhel puri pani puri',                       kcal:180, protein:5.0, carbs:30.0, fat:5.0, fibre:3.0, sugar:3.0, sodium:400, satFat:1.0, cholesterol:0},
+  {name:'Coconut Chutney',   tags:'coconut chutney thengai chutney',                 kcal:220, protein:2.5, carbs:10.0, fat:19.0,fibre:5.0, sugar:2.0, sodium:160, satFat:17.0,cholesterol:0},
+  {name:'Tomato Chutney',    tags:'tomato chutney thakkali chutney',                 kcal:65,  protein:1.5, carbs:9.0,  fat:3.0, fibre:1.5, sugar:4.0, sodium:200, satFat:0.5, cholesterol:0},
+  {name:'Halwa (Sooji)',     tags:'sooji halwa rava halwa suji halwa',               kcal:280, protein:4.0, carbs:42.0, fat:11.0,fibre:0.5, sugar:22.0,sodium:80,  satFat:7.0, cholesterol:30},
+  {name:'Kheer',             tags:'kheer payasam rice pudding',                      kcal:140, protein:4.0, carbs:22.0, fat:4.5, fibre:0.2, sugar:18.0,sodium:60,  satFat:3.0, cholesterol:15},
+  {name:'Gulab Jamun',       tags:'gulab jamun',                                     kcal:384, protein:6.0, carbs:62.0, fat:13.0,fibre:0.5, sugar:50.0,sodium:120, satFat:7.0, cholesterol:25},
+  {name:'Lassi (sweet)',     tags:'lassi sweet lassi',                               kcal:97,  protein:3.5, carbs:14.0, fat:3.5, fibre:0.0, sugar:13.0,sodium:50,  satFat:2.2, cholesterol:14},
+  {name:'Chai (milk tea)',   tags:'chai tea milk tea masala chai',                   kcal:45,  protein:1.8, carbs:6.5,  fat:1.8, fibre:0.0, sugar:6.0, sodium:20,  satFat:1.1, cholesterol:7},
+  {name:'Coconut Rice',      tags:'coconut rice thengai sadam',                      kcal:155, protein:2.8, carbs:28.0, fat:4.0, fibre:1.0, sugar:0.5, sodium:80,  satFat:3.5, cholesterol:0},
+  {name:'Tamarind Rice',     tags:'tamarind rice puliyodharai puliyogare',           kcal:168, protein:3.0, carbs:32.0, fat:4.0, fibre:1.5, sugar:1.0, sodium:300, satFat:0.8, cholesterol:0},
+  {name:'Lemon Rice',        tags:'lemon rice chitranna',                            kcal:148, protein:2.5, carbs:28.0, fat:3.5, fibre:0.8, sugar:0.5, sodium:180, satFat:0.5, cholesterol:0},
+  {name:'Curd Rice',         tags:'curd rice thayir sadam dahi chawal',              kcal:110, protein:3.5, carbs:18.0, fat:3.0, fibre:0.3, sugar:2.5, sodium:80,  satFat:1.8, cholesterol:10},
+  {name:'Uttapam',           tags:'uttapam uthapam',                                 kcal:145, protein:4.5, carbs:23.0, fat:4.0, fibre:1.5, sugar:1.0, sodium:220, satFat:0.8, cholesterol:0},
+  {name:'Pesarattu',         tags:'pesarattu green moong dosa',                      kcal:120, protein:6.5, carbs:18.0, fat:3.0, fibre:2.5, sugar:0.5, sodium:180, satFat:0.5, cholesterol:0},
+  {name:'Appam',             tags:'appam hoppers kerala',                            kcal:120, protein:2.5, carbs:24.0, fat:2.0, fibre:0.5, sugar:0.5, sodium:120, satFat:1.5, cholesterol:0},
+  {name:'Puttu',             tags:'puttu kerala steam cake',                         kcal:150, protein:3.5, carbs:30.0, fat:2.5, fibre:1.5, sugar:0.5, sodium:80,  satFat:2.0, cholesterol:0},
+  {name:'Paniyaram',         tags:'paniyaram appe kuzhi paniyaram',                  kcal:155, protein:4.0, carbs:22.0, fat:5.5, fibre:1.5, sugar:0.5, sodium:200, satFat:1.0, cholesterol:0},
+  {name:'Puri',              tags:'puri poori fried bread',                          kcal:340, protein:8.0, carbs:45.0, fat:15.0,fibre:2.0, sugar:0.5, sodium:180, satFat:2.5, cholesterol:0},
+  {name:'Bhatura',           tags:'bhatura chole bhature',                           kcal:380, protein:8.5, carbs:48.0, fat:18.0,fibre:1.5, sugar:1.0, sodium:300, satFat:3.5, cholesterol:0},
+  {name:'Naan',              tags:'naan tandoor bread',                              kcal:310, protein:9.0, carbs:52.0, fat:7.5, fibre:2.0, sugar:2.0, sodium:480, satFat:1.5, cholesterol:5},
+  {name:'Dum Aloo',          tags:'dum aloo baby potato curry',                      kcal:130, protein:2.5, carbs:16.0, fat:6.0, fibre:2.5, sugar:1.5, sodium:280, satFat:1.5, cholesterol:0},
+  {name:'Methi Thepla',      tags:'methi thepla fenugreek flatbread',                kcal:230, protein:7.5, carbs:34.0, fat:7.5, fibre:4.0, sugar:0.5, sodium:200, satFat:1.0, cholesterol:0},
+  {name:'Dhokla',            tags:'dhokla khaman',                                   kcal:160, protein:7.0, carbs:25.0, fat:4.0, fibre:1.5, sugar:3.0, sodium:420, satFat:0.5, cholesterol:0},
+];
 
-async function searchFood() {
-  const name  = document.getElementById('foodInput').value.trim();
-  const grams = parseFloat(document.getElementById('gramsInput').value);
-  if (!name)  { showStatus('Enter a food name.','error'); return; }
-  if (!grams||grams<=0) { showStatus('Enter weight in grams.','error'); return; }
-  if (!state.goals) { showStatus('Set up your goals first (Goals tab).','error'); return; }
+// Pre-build search index for O(1) lookup
+const INDIAN_DISH_INDEX = INDIAN_DISHES.map(d => ({
+  ...d,
+  _search: (d.name + ' ' + d.tags).toLowerCase()
+}));
 
-  document.getElementById('searchBtn').disabled = true;
-  document.getElementById('searchBtn').textContent = 'Searching…';
-  showStatus('Searching USDA food database…','loading');
-  document.getElementById('searchResult').style.display = 'none';
-  document.getElementById('multiResults').innerHTML = '';
+function searchIndianDishes(query, grams) {
+  const q = query.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+  const words = q.split(/\s+/);
+  const scored = INDIAN_DISH_INDEX.map(d => {
+    let score = 0;
+    words.forEach(w => { if (d._search.includes(w)) score += w.length; });
+    // Bonus for starting match
+    if (d._search.startsWith(q)) score += 10;
+    if (d.name.toLowerCase().startsWith(q)) score += 8;
+    return { ...d, score };
+  }).filter(d => d.score > 0).sort((a,b) => b.score - a.score);
 
-  try {
-    const results = await fetchUsdaSearch(name, grams);
-    if (results && results.length > 0) {
-      if (results.length === 1) showSearchResult(results[0], grams);
-      else showMultiResults(results, grams);
-    } else {
-      showStatus('Not in USDA database — asking AI…','loading');
-      const ai = await fetchNutritionAI(name, grams);
-      if (ai) showSearchResult(ai, grams);
-      else showStatus('Could not find nutrition data. Try rephrasing (e.g. "boiled chicken breast").','error');
-    }
-  } catch(e) {
-    showStatus('Network error. Check your connection.','error');
-  }
-  document.getElementById('searchBtn').disabled = false;
-  document.getElementById('searchBtn').textContent = 'Search';
+  if (scored.length === 0) return null;
+  return scored.slice(0, 4).map(d => {
+    const f = grams / 100;
+    return {
+      name: d.name,
+      source: 'ICMR-NIN 2017',
+      dataType: 'Indian',
+      kcal:        Math.round(d.kcal * f),
+      protein:     Math.round(d.protein * f * 10) / 10,
+      carbs:       Math.round(d.carbs * f * 10) / 10,
+      fat:         Math.round(d.fat * f * 10) / 10,
+      fibre:       Math.round(d.fibre * f * 10) / 10,
+      sugar:       Math.round(d.sugar * f * 10) / 10,
+      sodium:      Math.round(d.sodium * f),
+      satFat:      Math.round(d.satFat * f * 10) / 10,
+      cholesterol: Math.round(d.cholesterol * f),
+    };
+  });
 }
+
+// ===== IFCT2017 CORPUS (ICMR-NIN raw ingredients via unpkg CDN) =====
+let ifctCorpus = null;
+let ifctLoading = false;
+
+async function loadIfctCorpus() {
+  if (ifctCorpus) return ifctCorpus;
+  if (ifctLoading) return null;
+  ifctLoading = true;
+  try {
+    // The official ifct2017.github.io website uses this exact URL
+    const res = await fetch('https://cdn.jsdelivr.net/npm/@ifct2017/compositions@2.0.9/assets/compositions.json');
+    if (!res.ok) throw new Error();
+    ifctCorpus = await res.json();
+    return ifctCorpus;
+  } catch(e) {
+    try {
+      // Fallback to unpkg
+      const res2 = await fetch('https://unpkg.com/@ifct2017/compositions@2.0.9/assets/compositions.json');
+      if (!res2.ok) throw new Error();
+      ifctCorpus = await res2.json();
+      return ifctCorpus;
+    } catch(e2) { return null; }
+  }
+}
+
+function searchIfct(query, grams, corpus) {
+  if (!corpus || !Array.isArray(corpus)) return null;
+  const q = query.toLowerCase().replace(/[^a-z0-9 ]/g,'').trim();
+  const words = q.split(/\s+/);
+
+  const scored = corpus.map(item => {
+    const searchable = ((item.name||'') + ' ' + (item.tags||'') + ' ' + (item.lang||'')).toLowerCase();
+    let score = 0;
+    words.forEach(w => { if (searchable.includes(w)) score += w.length; });
+    if (item.name && item.name.toLowerCase().startsWith(q)) score += 8;
+    return { item, score };
+  }).filter(x => x.score > 0).sort((a,b) => b.score - a.score);
+
+  if (scored.length === 0) return null;
+  return scored.slice(0, 3).map(({ item: d }) => {
+    const f = grams / 100;
+    // IFCT2017 field names: enerc (kcal), protein, fatce, choavldf (carbs), fibtg (fibre), sugar, na (sodium), fasat (satFat), cholc (cholesterol)
+    return {
+      name: d.name || 'Unknown',
+      source: 'ICMR-NIN IFCT',
+      dataType: 'Indian',
+      kcal:        Math.round((d.enerc || d.energy || 0) * f),
+      protein:     Math.round((d.protcnt || d.protein || 0) * f * 10) / 10,
+      carbs:       Math.round((d.choavldf || d.carb || 0) * f * 10) / 10,
+      fat:         Math.round((d.fatce || d.fat || 0) * f * 10) / 10,
+      fibre:       Math.round((d.fibtg || d.fibre || 0) * f * 10) / 10,
+      sugar:       Math.round((d.sugar || 0) * f * 10) / 10,
+      sodium:      Math.round((d.na || d.sodium || 0) * f),
+      satFat:      Math.round((d.fasat || 0) * f * 10) / 10,
+      cholesterol: Math.round((d.cholc || d.chol || 0) * f),
+    };
+  });
+}
+
+// ===== USDA SEARCH (bug fixed: sodium/cholesterol already in mg) =====
+function getUsdaKey() { return state.profile?.usdaKey || 'DEMO_KEY'; }
 
 async function fetchUsdaSearch(name, grams) {
   const key = getUsdaKey();
@@ -631,17 +762,73 @@ function parseFdcFood(food, grams) {
     name: food.description || 'Unknown',
     brand: food.brandOwner || food.brandName || '',
     dataType: food.dataType || '',
-    source: 'USDA',
-    kcal:        Math.round(n[FDC_NUTRIENTS.kcal]*f),
-    protein:     Math.round((n[FDC_NUTRIENTS.protein]||0)*f*10)/10,
-    carbs:       Math.round((n[FDC_NUTRIENTS.carbs]||0)*f*10)/10,
-    fat:         Math.round((n[FDC_NUTRIENTS.fat]||0)*f*10)/10,
-    fibre:       Math.round((n[FDC_NUTRIENTS.fibre]||0)*f*10)/10,
-    sugar:       Math.round((n[FDC_NUTRIENTS.sugar]||0)*f*10)/10,
-    sodium:      Math.round((n[FDC_NUTRIENTS.sodium]||0)*f*1000),
-    satFat:      Math.round((n[FDC_NUTRIENTS.satFat]||0)*f*10)/10,
-    cholesterol: Math.round((n[FDC_NUTRIENTS.cholesterol]||0)*f*1000),
+    source: 'USDA FDC',
+    kcal:        Math.round(n[FDC_NUTRIENTS.kcal] * f),
+    protein:     Math.round((n[FDC_NUTRIENTS.protein] ||0) * f * 10) / 10,
+    carbs:       Math.round((n[FDC_NUTRIENTS.carbs]   ||0) * f * 10) / 10,
+    fat:         Math.round((n[FDC_NUTRIENTS.fat]     ||0) * f * 10) / 10,
+    fibre:       Math.round((n[FDC_NUTRIENTS.fibre]   ||0) * f * 10) / 10,
+    sugar:       Math.round((n[FDC_NUTRIENTS.sugar]   ||0) * f * 10) / 10,
+    // FIX: USDA returns sodium & cholesterol already in mg — do NOT multiply by 1000
+    sodium:      Math.round((n[FDC_NUTRIENTS.sodium]  ||0) * f),
+    satFat:      Math.round((n[FDC_NUTRIENTS.satFat]  ||0) * f * 10) / 10,
+    cholesterol: Math.round((n[FDC_NUTRIENTS.cholesterol]||0) * f),
   };
+}
+
+// ===== MAIN SEARCH ORCHESTRATOR =====
+async function searchFood() {
+  const name  = document.getElementById('foodInput').value.trim();
+  const grams = parseFloat(document.getElementById('gramsInput').value);
+  if (!name)       { showStatus('Enter a food name.','error'); return; }
+  if (!grams||grams<=0) { showStatus('Enter weight in grams.','error'); return; }
+  if (!state.goals){ showStatus('Set up your goals first (Goals tab).','error'); return; }
+
+  document.getElementById('searchBtn').disabled = true;
+  document.getElementById('searchBtn').textContent = 'Searching…';
+  document.getElementById('searchResult').style.display = 'none';
+  document.getElementById('multiResults').innerHTML = '';
+
+  try {
+    // TIER 1: Indian dish table (instant, offline)
+    showStatus('Searching Indian food database…','loading');
+    const indianResults = searchIndianDishes(name, grams);
+    if (indianResults && indianResults.length > 0) {
+      if (indianResults.length === 1) showSearchResult(indianResults[0], grams);
+      else showMultiResults(indianResults, grams, null);
+      document.getElementById('searchBtn').disabled = false;
+      document.getElementById('searchBtn').textContent = 'Search';
+      return;
+    }
+
+    // TIER 2: IFCT2017 corpus (raw Indian ingredients from CDN)
+    showStatus('Loading ICMR-NIN corpus…','loading');
+    const corpus = await loadIfctCorpus();
+    if (corpus) {
+      const ifctResults = searchIfct(name, grams, corpus);
+      if (ifctResults && ifctResults.length > 0) {
+        if (ifctResults.length === 1) showSearchResult(ifctResults[0], grams);
+        else showMultiResults(ifctResults, grams, null);
+        document.getElementById('searchBtn').disabled = false;
+        document.getElementById('searchBtn').textContent = 'Search';
+        return;
+      }
+    }
+
+    // TIER 3: USDA FoodData Central
+    showStatus('Searching USDA database…','loading');
+    const usdaResults = await fetchUsdaSearch(name, grams);
+    if (usdaResults && usdaResults.length > 0) {
+      if (usdaResults.length === 1) showSearchResult(usdaResults[0], grams);
+      else showMultiResults(usdaResults, grams, null);
+    } else {
+      showStatus('Not found. Try alternate spelling (e.g. "dosai" → "dosa", "chicken biryani").','error');
+    }
+  } catch(e) {
+    showStatus('Network error. Check your connection.','error');
+  }
+  document.getElementById('searchBtn').disabled = false;
+  document.getElementById('searchBtn').textContent = 'Search';
 }
 
 function showMultiResults(results, grams) {
@@ -653,58 +840,17 @@ function showMultiResults(results, grams) {
       `<div class="multi-pick-item" onclick="selectResult(${i})">
         <div>
           <div class="multi-pick-name">${r.name}</div>
-          <div class="multi-pick-sub">${r.brand||r.dataType} · P${r.protein}g C${r.carbs}g F${r.fat}g</div>
+          <div class="multi-pick-sub">${r.source} · P${r.protein}g C${r.carbs}g F${r.fat}g</div>
         </div>
         <div class="multi-pick-kcal">${r.kcal} kcal</div>
       </div>`
-    ).join('') +
-    `<div class="multi-pick-item" onclick="aiInstead(${grams})" style="justify-content:center;">
-      <span style="font-size:12px;color:var(--text2);">None of these — use AI estimate</span>
-    </div>`;
+    ).join('');
 }
 
 function selectResult(i) {
   const r = window._multiResults[i];
   document.getElementById('multiResults').innerHTML = '';
-  showSearchResult(r, r.kcal > 0 ? parseFloat(document.getElementById('gramsInput').value) : 100);
-}
-
-async function aiInstead(grams) {
-  document.getElementById('multiResults').innerHTML = '';
-  const name = document.getElementById('foodInput').value.trim();
-  showStatus('Asking AI for nutrition estimate…','loading');
-  const ai = await fetchNutritionAI(name, grams);
-  if (ai) showSearchResult(ai, grams);
-  else showStatus('Could not estimate. Try a different name.','error');
-}
-
-async function fetchNutritionAI(name, grams) {
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        model:'claude-sonnet-4-20250514', max_tokens:350,
-        system:'You are a precise nutrition database. Return ONLY a valid JSON object, no markdown, no explanation.',
-        messages:[{role:'user',content:`Nutrition values for ${grams}g of "${name}". Use standard USDA values. Return JSON: {kcal,protein,carbs,fat,sugar,fibre,sodium_mg,satFat,cholesterol_mg}. All numbers, 0 if unknown.`}]
-      })
-    });
-    const data = await res.json();
-    const text = (data.content?.[0]?.text||'').replace(/```json|```/g,'').trim();
-    const n = JSON.parse(text);
-    return {
-      name, source:'AI estimate',
-      kcal:Math.round(n.kcal||0),
-      protein:Math.round((n.protein||0)*10)/10,
-      carbs:Math.round((n.carbs||0)*10)/10,
-      fat:Math.round((n.fat||0)*10)/10,
-      sugar:Math.round((n.sugar||0)*10)/10,
-      fibre:Math.round((n.fibre||0)*10)/10,
-      sodium:Math.round(n.sodium_mg||0),
-      satFat:Math.round((n.satFat||0)*10)/10,
-      cholesterol:Math.round(n.cholesterol_mg||0),
-    };
-  } catch(e) { return null; }
+  showSearchResult(r, parseFloat(document.getElementById('gramsInput').value) || 100);
 }
 
 function showSearchResult(data, grams) {
